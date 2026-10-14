@@ -14,7 +14,7 @@ Setiap slice punya **Gerbang**: syarat yang harus terpenuhi sebelum boleh dinyat
 - [x] **S01 — Flutter kosong.** Proyek di `apps/mobile`, tema dasar, satu halaman placeholder. *Gerbang:* berjalan di emulator; analyze dan test lulus.
 - [x] **S02 — Proxy kosong.** Worker dengan `GET /health`. *Gerbang:* `curl` mengembalikan 200; ada satu test.
 - [x] **S03 — Kontrak API v0.** Skema `/chat` (request, response, event SSE, kode error) di `packages/contracts`. *Gerbang:* hanya dokumen/skema, tanpa kode lain; disetujui pemilik.
-- [ ] **S04 — Script verifikasi.** `scripts/verify.sh` menjalankan semua gerbang mobile dan proxy. *Gerbang:* satu perintah, hasil lulus/gagal jelas.
+- [x] **S04 — Script verifikasi.** `scripts/verify.sh` menjalankan semua gerbang mobile dan proxy. *Gerbang:* satu perintah, hasil lulus/gagal jelas.
 
 ## Fase 1 — UI statis (tanpa jaringan)
 
