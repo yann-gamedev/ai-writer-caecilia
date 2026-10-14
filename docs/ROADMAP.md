@@ -11,7 +11,7 @@ Setiap slice punya **Gerbang**: syarat yang harus terpenuhi sebelum boleh dinyat
 ## Fase 0 — Fondasi (tanpa fitur)
 
 - [x] **S00 — Skeleton repo.** Struktur folder, `.gitignore`, `.env.example`, AGENT.md, ROADMAP.md. *Gerbang:* tidak ada kode fitur; struktur sesuai AGENT.md.
-- [ ] **S01 — Flutter kosong.** Proyek di `apps/mobile`, tema dasar, satu halaman placeholder. *Gerbang:* berjalan di emulator; analyze dan test lulus.
+- [x] **S01 — Flutter kosong.** Proyek di `apps/mobile`, tema dasar, satu halaman placeholder. *Gerbang:* berjalan di emulator; analyze dan test lulus.
 - [ ] **S02 — Proxy kosong.** Worker dengan `GET /health`. *Gerbang:* `curl` mengembalikan 200; ada satu test.
 - [ ] **S03 — Kontrak API v0.** Skema `/chat` (request, response, event SSE, kode error) di `packages/contracts`. *Gerbang:* hanya dokumen/skema, tanpa kode lain; disetujui pemilik.
 - [ ] **S04 — Script verifikasi.** `scripts/verify.sh` menjalankan semua gerbang mobile dan proxy. *Gerbang:* satu perintah, hasil lulus/gagal jelas.
