@@ -1,0 +1,92 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Caecilia Chat API", "version": "0.1.0", "description": "Kontrak v0; bukan pernyataan bahwa endpoint sudah diimplementasikan. HTTPS wajib untuk akses publik; HTTP hanya untuk loopback pengembangan. Model ditentukan oleh MODEL_NAME di proxy." },
+  "paths": {
+    "/chat": {
+      "post": {
+        "operationId": "chat",
+        "summary": "Menghasilkan jawaban asisten dalam JSON atau SSE",
+        "description": "Body maksimal 262144 byte UTF-8. stream=false atau tidak diberikan memilih JSON; stream=true memilih SSE. Respons maksimal 1048576 byte termasuk framing SSE. Batas byte diperiksa selain batas karakter pada skema. Field tambahan ditolak. Tidak ada retry atau resume otomatis.",
+        "security": [{ "appToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatRequest" }, "example": { "messages": [{ "role": "user", "content": "Bantu susun pembuka cerita." }], "stream": false, "max_tokens": 1024 } } }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON untuk non-stream; SSE untuk stream. Error setelah header 200 dikirim menggunakan event error, bukan perubahan status HTTP.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatResponse" }, "example": { "message": { "role": "assistant", "content": "Pagi itu, pintu perpustakaan terbuka sendiri." }, "finish_reason": "stop" } },
+              "text/event-stream": { "schema": { "type": "string" }, "example": "event: delta\ndata: {\"text\":\"Pagi itu.\"}\n\nevent: done\ndata: {\"finish_reason\":\"stop\"}\n\n" }
+            }
+          },
+          "400": { "description": "INVALID_REQUEST: JSON rusak atau request melanggar skema.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "UNAUTHORIZED: token aplikasi tidak ada atau tidak valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "NOT_FOUND: endpoint chat tidak ditemukan; tidak mengubah kontrak health S02.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "405": {
+            "description": "METHOD_NOT_ALLOWED: method selain POST pada /chat. Berlaku juga ketika operasi POST ini tidak dipilih.",
+            "headers": { "Allow": { "description": "Wajib bernilai POST.", "schema": { "type": "string", "const": "POST" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          },
+          "413": { "description": "PAYLOAD_TOO_LARGE: body melebihi 262144 byte UTF-8.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "415": { "description": "UNSUPPORTED_MEDIA_TYPE: body bukan application/json.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "429": {
+            "description": "RATE_LIMITED: pembatasan permintaan; kebijakan kuota ditentukan pada S21.",
+            "headers": { "Retry-After": { "description": "Wajib; jumlah detik sebelum mencoba kembali, bukan instruksi retry otomatis.", "schema": { "type": "string", "pattern": "^[0-9]+$" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          },
+          "500": { "description": "INTERNAL_ERROR: gangguan internal proxy.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "502": { "description": "UPSTREAM_ERROR: provider gagal, respons tidak valid, atau batas respons terlampaui.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "504": { "description": "UPSTREAM_TIMEOUT: provider melewati batas waktu; durasi kebijakan bukan bagian v0.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        },
+        "x-max-request-bytes": 262144,
+        "x-max-response-bytes": 1048576,
+        "x-sse-schema": "./sse.schema.json"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "appToken": { "type": "http", "scheme": "bearer", "description": "Token aplikasi pada Authorization. Validasi terhadap CAECILIA_APP_TOKEN di proxy; bukan API key provider. Tidak ada nilai token dalam contoh." } },
+    "schemas": {
+      "ChatRequest": {
+        "type": "object", "additionalProperties": false, "required": ["messages"],
+        "properties": {
+          "messages": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "$ref": "#/components/schemas/Message" } },
+          "stream": { "type": "boolean", "default": false },
+          "max_tokens": { "type": "integer", "minimum": 1, "maximum": 4096, "default": 1024 }
+        }
+      },
+      "Message": {
+        "type": "object", "additionalProperties": false, "required": ["role", "content"],
+        "properties": {
+          "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+          "content": { "type": "string", "minLength": 1, "maxLength": 16000, "description": "Panjang dalam Unicode code point; terpisah dari batas byte total request." }
+        }
+      },
+      "ChatResponse": {
+        "type": "object", "additionalProperties": false, "required": ["message", "finish_reason"],
+        "properties": {
+          "message": {
+            "type": "object", "additionalProperties": false, "required": ["role", "content"],
+            "properties": { "role": { "type": "string", "const": "assistant" }, "content": { "type": "string" } }
+          },
+          "finish_reason": { "$ref": "#/components/schemas/FinishReason" }
+        }
+      },
+      "FinishReason": { "type": "string", "enum": ["stop", "length"] },
+      "ErrorResponse": {
+        "type": "object", "additionalProperties": false, "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object", "additionalProperties": false, "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "enum": ["INVALID_REQUEST", "UNAUTHORIZED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "PAYLOAD_TOO_LARGE", "UNSUPPORTED_MEDIA_TYPE", "RATE_LIMITED", "INTERNAL_ERROR", "UPSTREAM_ERROR", "UPSTREAM_TIMEOUT"] },
+              "message": { "type": "string", "minLength": 1, "description": "Pesan aman berbahasa Indonesia; tanpa secret, prompt, teks novel, atau respons mentah provider." }
+            }
+          }
+        },
+        "example": { "error": { "code": "INVALID_REQUEST", "message": "Permintaan tidak valid." } }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Caecilia SSE event v0",
+  "description": "Representasi event yang sudah diparse: event berasal dari field event SSE, data adalah hasil parse JSON field data. Envelope ini bukan JSON yang dikirim utuh di wire. Batas frame 65536 byte UTF-8 termasuk framing; batas seluruh respons 1048576 byte. Urutan dan batas byte dijelaskan di README.md.",
+  "oneOf": [
+    {
+      "type": "object", "additionalProperties": false, "required": ["event", "data"],
+      "properties": {
+        "event": { "const": "delta" },
+        "data": {
+          "type": "object", "additionalProperties": false, "required": ["text"],
+          "properties": { "text": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false, "required": ["event", "data"],
+      "properties": {
+        "event": { "const": "done" },
+        "data": {
+          "type": "object", "additionalProperties": false, "required": ["finish_reason"],
+          "properties": { "finish_reason": { "$ref": "./openapi.json#/components/schemas/FinishReason" } }
+        }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false, "required": ["event", "data"],
+      "properties": {
+        "event": { "const": "error" },
+        "data": {
+          "allOf": [
+            { "$ref": "./openapi.json#/components/schemas/ErrorResponse" },
+            { "properties": { "error": { "properties": { "code": { "enum": ["INTERNAL_ERROR", "UPSTREAM_ERROR", "UPSTREAM_TIMEOUT"] } } } } }
+          ]
+        }
+      }
+    }
+  ],
+  "examples": [
+    { "event": "delta", "data": { "text": "Pagi itu." } },
+    { "event": "done", "data": { "finish_reason": "stop" } },
+    { "event": "error", "data": { "error": { "code": "UPSTREAM_ERROR", "message": "Layanan model mengalami gangguan." } } }
+  ]
+}
